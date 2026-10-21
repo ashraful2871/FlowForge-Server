@@ -13,7 +13,10 @@
     "dev": "tsx watch --env-file=.env src/server.ts",
     "build": "tsup",
     "start": "node --env-file=.env dist/server.js",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [],
   "author": "",

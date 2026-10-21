@@ -1,7 +1,8 @@
 import { createApp } from "./app";
+import { config } from "./config";
 
 const app = createApp();
 
-app.listen(5000, () => {
-  console.log("API listening on http://localhost:5000");
+app.listen(config.PORT, () => {
+  console.log(`API listening on http://localhost:${config.PORT}`);
 });

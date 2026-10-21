@@ -4,5 +4,6 @@ import { healthRoute } from "./routes/health";
 export const createApp = (): Express => {
   const app = express();
   app.use(healthRoute);
+
   return app;
 };

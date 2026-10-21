@@ -1,0 +1,47 @@
+{
+  "name": "flowforge-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "dotenv run -f .env.test -- vitest run",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:test": "dotenv run -f .env.test -- prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate",
+    "test:watch": "dotenv run -f .env.test -- vitest",
+    "dev": "tsx watch --env-file=.env src/server.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.13.0",
+    "pino-pretty": "^13.2.0",
+    "prettier": "^3.9.10",
+    "prisma": "^7.10.1",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0",
+    "helmet": "^8.3.0",
+    "pg": "^8.23.1",
+    "pino": "^10.4.0",
+    "pino-http": "^11.0.0",
+    "zod": "^4.6.7"
+  }
+}

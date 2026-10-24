@@ -7,10 +7,10 @@ function sendError(
   status: number,
   code: string,
   message: string,
-  requestid: unknown,
+  requestId: unknown,
   fields?: Record<string, string>,
 ): void {
-  res.status(status).json({ error: { code, message, requestid, fields } });
+  res.status(status).json({ error: { code, message, requestId, fields } });
 }
 
 export function errorHandler(

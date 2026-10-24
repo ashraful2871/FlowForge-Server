@@ -1,0 +1,12 @@
+model User {
+    id              String    @id @default(uuid())
+    name            String
+    email           String    @unique
+    passwordHash    String
+    emailVerifiedAt DateTime?
+    createdAt       DateTime  @default(now())
+    updatedAt       DateTime  @updatedAt
+
+    sessions            Session[]
+    passwordResetTokens PasswordResetToken[]
+}

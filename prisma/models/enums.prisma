@@ -1,0 +1,18 @@
+enum OrgRole {
+    OWNER
+    ADMIN
+    MEMBER
+    VIEWER
+}
+
+enum MembershipStatus {
+    ACTIVE
+    REMOVED
+}
+
+enum AuditAction {
+    LOGIN
+    ROLE_CHANGE
+    MEMBER_REMOVE
+    OWNERSHIP_TRANSFERRED
+}

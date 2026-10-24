@@ -11,11 +11,15 @@ export class AppError extends Error {
 }
 
 export function notFoundError(message = "Not Found"): AppError {
-  return new AppError(404, "NOT FOUND", message);
+  return new AppError(404, "NOT_FOUND", message);
 }
 export function forbiddenError(message = "Forbidden"): AppError {
   return new AppError(403, "FORBIDDEN", message);
 }
 export function conflictError(code: string, message: string): AppError {
   return new AppError(409, code, message);
+}
+
+export function unauthenticatedError(message = "Not Logged In"): AppError {
+  return new AppError(401, "UNAUTHENTICATED", message);
 }

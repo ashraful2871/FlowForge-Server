@@ -1,4 +1,4 @@
-import z, { boolean } from "zod";
+import { z } from "zod";
 
 const EnvSchema = z.object({
   NODE_ENV: z
@@ -13,12 +13,14 @@ const EnvSchema = z.object({
       value
         .split(",")
         .map((origin) => origin.trim())
-        .filter(boolean),
+        .filter(Boolean),
     ),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
   SESSION_TTL_DAYS: z.coerce.number().int().min(1).default(30),
+  SESSION_IDLE_DAYS: z.coerce.number().int().min(1).default(7),
+  APP_URL: z.url().default("http://localhost:3000"),
 });
 const parsed = EnvSchema.safeParse(process.env);
 

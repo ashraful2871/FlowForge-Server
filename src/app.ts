@@ -6,6 +6,8 @@ import { notFound } from "./lib/notFound";
 import { errorHandler } from "./lib/errorHandler";
 import helmet from "helmet";
 import { config } from "./config";
+import { createApiRouter } from "./routes";
+import cookieParser from "cookie-parser";
 
 export const createApp = (): Express => {
   const app = express();
@@ -13,7 +15,9 @@ export const createApp = (): Express => {
   app.use(helmet());
   app.use(cors({ origin: config.CORS_ORIGINS, credentials: true }));
   app.use(express.json({ limit: "100kb" }));
+  app.use(cookieParser());
   app.use(healthRoute);
+  app.use("api/v1", createApiRouter());
   app.use(notFound);
   app.use(errorHandler);
 

@@ -32,7 +32,7 @@ describe("unknown route", () => {
     const res = await request(app).get("/nope");
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("NOT_FOUND");
-    expect(typeof res.body.error.requestid).toBe("string");
+    expect(typeof res.body.error.requestId).toBe("string");
   });
 });
 

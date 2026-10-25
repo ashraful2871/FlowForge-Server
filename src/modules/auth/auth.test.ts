@@ -194,3 +194,71 @@ describe("requireSession (via GET /me)", () => {
     );
   });
 });
+
+describe("POST /auth/login", () => {
+  it("logs in, sets a cookie and writes a LOGIN audit row", async () => {
+    const { user } = await signUp();
+    const res = await newAgent()
+      .post("/api/v1/auth/login")
+      .send({ email: user.email, password: TEST_PASSWORD });
+
+    expect(res.status).toBe(200);
+    expect(getCookie(res, "ff_session")).toBeDefined();
+
+    const audit = await prisma.auditLog.findMany({
+      where: { actorId: user.id, action: "LOGIN" },
+    });
+    expect(audit).toHaveLength(1);
+  });
+
+  it("returns 401 INVALID_CREDENTIALS for a wrong password", async () => {
+    const { user } = await signUp();
+    const res = await newAgent()
+      .post("/api/v1/auth/login")
+      .send({ email: user.email, password: "wrong-password-123" });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("INVALID_CREDENTIALS");
+  });
+
+  it("gives the exact same message for an unknown email", async () => {
+    const { user } = await signUp();
+    const wrongPassword = await newAgent()
+      .post("/api/v1/auth/login")
+      .send({ email: user.email, password: "wrong-password-123" });
+    const unknownEmail = await newAgent()
+      .post("/api/v1/auth/login")
+      .send({ email: "nobody@test.dev", password: "wrong-password-123" });
+
+    expect(unknownEmail.status).toBe(401);
+    expect(unknownEmail.body.error.message).toBe(
+      wrongPassword.body.error.message,
+    );
+  });
+
+  it("accepts the email in another case", async () => {
+    const { user } = await signUp();
+    const res = await newAgent()
+      .post("/api/v1/auth/login")
+      .send({ email: user.email.toUpperCase(), password: TEST_PASSWORD });
+
+    expect(res.status).toBe(200);
+  });
+
+  it("returns 429 after 10 failed attempts for one email", async () => {
+    const { user } = await signUp();
+    const agent = newAgent();
+
+    for (let i = 0; i < 10; i++) {
+      await agent
+        .post("/api/v1/auth/login")
+        .send({ email: user.email, password: "wrong-password-123" });
+    }
+
+    const res = await agent
+      .post("/api/v1/auth/login")
+      .send({ email: user.email, password: TEST_PASSWORD });
+    expect(res.status).toBe(429);
+    expect(res.body.error.code).toBe("RATE_LIMITED");
+  });
+});

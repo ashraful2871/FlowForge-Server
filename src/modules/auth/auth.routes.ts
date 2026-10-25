@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { loginHandler, registerHandler } from "./auth.controller";
+import { AuthController } from "./auth.controller";
 import {
   emailLimiter,
   HOUR,
   ipLimiter,
   MINUTE,
 } from "../../middleware/rateLimit";
+import { requireSession } from "../../middleware/requireSession";
 
 export const createAuthRouter = (): Router => {
   const router = Router();
@@ -15,15 +16,18 @@ export const createAuthRouter = (): Router => {
     "/register",
     perIp,
     emailLimiter("register", HOUR, 5),
-    registerHandler,
+    AuthController.registerHandler,
   );
 
   router.post(
     "/login",
     perIp,
     emailLimiter("login", 15 * MINUTE, 10, true),
-    loginHandler,
+    AuthController.loginHandler,
   );
+
+  router.post("/logout", requireSession, AuthController.logoutHandler);
+  router.post("/logout-all", requireSession, AuthController.logoutAllHandler);
 
   return router;
 };

@@ -262,3 +262,56 @@ describe("POST /auth/login", () => {
     expect(res.body.error.code).toBe("RATE_LIMITED");
   });
 });
+
+describe("logout, logout-all, GET /me", () => {
+  it("logout ends the session", async () => {
+    const { agent } = await signUp();
+
+    const logout = await agent.post("/api/v1/auth/logout");
+    expect(logout.status).toBe(204);
+
+    const me = await agent.get("/api/v1/me");
+    expect(me.status).toBe(401);
+  });
+
+  it("a replayed cookie after logout returns 401", async () => {
+    const agent = newAgent();
+    const register = await agent.post("/api/v1/auth/register").send({
+      name: "Ashraful",
+      email: uniqueEmail(),
+      password: TEST_PASSWORD,
+    });
+    const oldCookie = getCookie(register, "ff_session");
+
+    await agent.post("/api/v1/auth/logout");
+
+    // চোর আগে কপি করে রাখা cookie হাতে পাঠাচ্ছে
+    const res = await request(app)
+      .get("/api/v1/me")
+      .set("Cookie", `ff_session=${oldCookie}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("logout-all ends sessions on every device", async () => {
+    const { agent: laptop, user } = await signUp();
+    const phone = newAgent();
+    await phone
+      .post("/api/v1/auth/login")
+      .send({ email: user.email, password: TEST_PASSWORD });
+
+    const res = await laptop.post("/api/v1/auth/logout-all");
+    expect(res.status).toBe(204);
+
+    const me = await phone.get("/api/v1/me");
+    expect(me.status).toBe(401);
+  });
+
+  it("GET /me returns memberships and no password hash", async () => {
+    const { agent } = await signUp();
+    const res = await agent.get("/api/v1/me");
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.memberships)).toBe(true);
+    expect(res.body.user.passwordHash).toBeUndefined();
+  });
+});

@@ -1,5 +1,5 @@
 import { config } from "../../config";
-import type { Prisma } from "../../generated/prisma/client";
+import type { OrgRole, Prisma } from "../../generated/prisma/client";
 import { writeAudit } from "../../lib/audit";
 import { prisma } from "../../lib/db";
 import { AppError, conflictError } from "../../lib/errors";
@@ -102,4 +102,71 @@ export const login = async (input: LoginInput, userAgent?: string) => {
     });
     return { user: toPublicUser(user), token };
   });
+};
+
+export const logout = async (sessionId: string): Promise<void> => {
+  await prisma.session.updateMany({
+    where: {
+      id: sessionId,
+      revokedAt: null,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
+};
+
+export const logoutAll = async (userId: string): Promise<void> => {
+  await prisma.session.updateMany({
+    where: {
+      userId: userId,
+      revokedAt: null,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
+};
+
+export type MyMembership = {
+  organizationId: string;
+  name: string;
+  slug: string;
+  role: OrgRole;
+};
+
+export const isMyMembership = async (
+  userId: string,
+): Promise<MyMembership[]> => {
+  const memberships = await prisma.membership.findMany({
+    where: {
+      userId,
+      status: "ACTIVE",
+    },
+    include: {
+      organization: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+  return memberships.map((membership) => ({
+    organizationId: membership.organizationId,
+    name: membership.organization.name,
+    slug: membership.organization.slug,
+    role: membership.role,
+  }));
+};
+
+export const AuthServices = {
+  register,
+  login,
+  logout,
+  logoutAll,
+  isMyMembership,
 };

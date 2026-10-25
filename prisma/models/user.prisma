@@ -9,4 +9,7 @@ model User {
 
     sessions            Session[]
     passwordResetTokens PasswordResetToken[]
+    memberships         Membership[]
+    invitationsSent     invitation[]
+    auditLogs           AuditLog[]
 }

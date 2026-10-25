@@ -1,0 +1,14 @@
+model AuditLog {
+    id             String        @id @default(uuid())
+    organizationId String?
+    actorId        String?
+    action         AuditAction
+    targetedType   String
+    targetedId     String
+    metaData       Json          @default("{}")
+    createdAt      DateTime      @default(now())
+    organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    actor          User?         @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+    @@index([organizationId, createdAt])
+}

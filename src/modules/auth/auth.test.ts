@@ -178,7 +178,7 @@ describe("requireSession (via GET /me)", () => {
     let session = await prisma.session.findFirstOrThrow({
       where: { userId: user.id },
     });
-    expect(session.lastSeen.getTime()).toBe(oneMinuteAgo.getTime());
+    expect(session.lastSeenAt.getTime()).toBe(oneMinuteAgo.getTime());
 
     const sixMinutesAgo = new Date(Date.now() - 6 * 60 * 1000);
     await prisma.session.updateMany({
@@ -190,6 +190,8 @@ describe("requireSession (via GET /me)", () => {
     session = await prisma.session.findFirstOrThrow({
       where: { userId: user.id },
     });
-    expect(session.lastSeen.getTime()).toBeGreaterThan(sixMinutesAgo.getTime());
+    expect(session.lastSeenAt.getTime()).toBeGreaterThan(
+      sixMinutesAgo.getTime(),
+    );
   });
 });

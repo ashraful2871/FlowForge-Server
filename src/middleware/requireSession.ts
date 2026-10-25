@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import type { NextFunction, Request, Response } from "express";
 import { clearSessionCookie, SESSION_COOKIE } from "../lib/sessionCookie";
@@ -45,7 +47,7 @@ export const requireSession = async (
     clearSessionCookie(res);
     throw unauthenticatedError();
   }
-  if (now - session.lastSeen.getTime() > LAST_SEEN_UPDATE_MS) {
+  if (now - session.lastSeenAt.getTime() > LAST_SEEN_UPDATE_MS) {
     await prisma.session.update({
       where: {
         id: session.id,

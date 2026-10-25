@@ -1,15 +1,16 @@
 import type { Request, Response } from "express";
 import { LoginBody, RegisterBody } from "./auth.schema";
-import * as authService from "./auth.service";
-import { setSessionCookie } from "../../lib/sessionCookie";
+
+import { clearSessionCookie, setSessionCookie } from "../../lib/sessionCookie";
 import { getAuth } from "../../middleware/requireSession";
+import { AuthServices } from "./auth.service";
 
 export const registerHandler = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
   const input = RegisterBody.parse(req.body);
-  const { user, token } = await authService.register(
+  const { user, token } = await AuthServices.register(
     input,
     req.get("user-agent"),
   );
@@ -23,12 +24,43 @@ export const loginHandler = async (
   res: Response,
 ): Promise<void> => {
   const input = LoginBody.parse(req.body);
-  const { user, token } = await authService.login(input, req.get("user-agent"));
+  const { user, token } = await AuthServices.login(
+    input,
+    req.get("user-agent"),
+  );
   setSessionCookie(res, token);
   res.json({ user });
 };
 
-export const meHandler = (req: Request, res: Response): void => {
+export const logoutHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { sessionId } = getAuth(req);
+  await AuthServices.logout(sessionId);
+  clearSessionCookie(res);
+  res.status(204).end();
+};
+
+export const logoutAllHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   const { user } = getAuth(req);
-  res.json({ user });
+  await AuthServices.logoutAll(user.id);
+  clearSessionCookie(res);
+  res.status(204).end();
+};
+export const meHandler = async (req: Request, res: Response): Promise<void> => {
+  const { user } = getAuth(req);
+  const memberships = await AuthServices.isMyMembership(user.id);
+
+  res.json({ user, memberships });
+};
+export const AuthController = {
+  registerHandler,
+  loginHandler,
+  meHandler,
+  logoutHandler,
+  logoutAllHandler,
 };

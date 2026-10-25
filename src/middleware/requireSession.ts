@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import type { NextFunction, Request, Response } from "express";
 import { clearSessionCookie, SESSION_COOKIE } from "../lib/sessionCookie";
 import { unauthenticatedError } from "../lib/errors";
@@ -42,7 +39,7 @@ export const requireSession = async (
     !session ||
     session.revokedAt != null ||
     session.expiresAt.getTime() <= now ||
-    session.expiresAt.getTime() + idleLimit <= now
+    session.lastSeenAt.getTime() + idleLimit <= now
   ) {
     clearSessionCookie(res);
     throw unauthenticatedError();
@@ -52,7 +49,7 @@ export const requireSession = async (
       where: {
         id: session.id,
       },
-      data: { lastSeen: new Date(now) },
+      data: { lastSeenAt: new Date(now) },
     });
   }
 

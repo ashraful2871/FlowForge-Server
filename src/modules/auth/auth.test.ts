@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getCookie, newAgent } from "../../../tests/helpers/agent";

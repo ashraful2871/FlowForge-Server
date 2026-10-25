@@ -1,27 +1,27 @@
 model Session {
-    id        String    @id @default(uuid())
-    userId    String
-    tokenHash String
-    createdAt DateTime  @default(now())
-    lastSeen  DateTime  @default(now())
-    expiresAt DateTime
-    revokedAt DateTime?
-    userAgent String?
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  createdAt DateTime  @default(now())
+  lastSeen  DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@index([userId])
+  @@index([userId])
 }
 
 model PasswordResetToken {
-    id        String    @id @default(uuid())
-    userId    String
-    tokenHash String    @unique
-    expiresAt DateTime
-    usedAt    DateTime?
-    createdAt DateTime  @default(now())
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@index([userId])
+  @@index([userId])
 }

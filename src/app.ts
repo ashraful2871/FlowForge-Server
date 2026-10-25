@@ -17,7 +17,7 @@ export const createApp = (): Express => {
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
   app.use(healthRoute);
-  app.use("api/v1", createApiRouter());
+  app.use("/api/v1", createApiRouter());
   app.use(notFound);
   app.use(errorHandler);
 

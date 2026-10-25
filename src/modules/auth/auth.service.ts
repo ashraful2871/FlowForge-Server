@@ -1,11 +1,12 @@
 import { config } from "../../config";
 import type { Prisma } from "../../generated/prisma/client";
+import { writeAudit } from "../../lib/audit";
 import { prisma } from "../../lib/db";
-import { conflictError } from "../../lib/errors";
-import { hashPassword } from "../../lib/password";
+import { AppError, conflictError } from "../../lib/errors";
+import { DUMMY_HASH, hashPassword, verifyPassword } from "../../lib/password";
 import { isUniqueViolation } from "../../lib/prismaErrors";
 import { generateToken, hashToken } from "../../lib/token";
-import type { RegisterInput } from "./auth.schema";
+import type { LoginInput, RegisterInput } from "./auth.schema";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -62,4 +63,43 @@ export const register = async (input: RegisterInput, userAgent?: string) => {
     }
     throw err;
   }
+};
+
+const invalidCredentialsError = (): AppError => {
+  return new AppError(
+    401,
+    "INVALID_CREDENTIALS",
+    "Email or password is incorrect",
+  );
+};
+
+export const login = async (input: LoginInput, userAgent?: string) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      email: input.email,
+    },
+  });
+
+  if (!user) {
+    await verifyPassword(DUMMY_HASH, input.password);
+    throw invalidCredentialsError();
+  }
+
+  const valid = await verifyPassword(user.passwordHash, input.password);
+
+  if (!valid) {
+    throw invalidCredentialsError();
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const token = await createSession(tx, user.id, userAgent);
+    await writeAudit(tx, {
+      organizationId: null,
+      actorId: user.id,
+      action: "LOGIN",
+      targetedType: "User",
+      targetedId: user.id,
+    });
+    return { user: toPublicUser(user), token };
+  });
 };

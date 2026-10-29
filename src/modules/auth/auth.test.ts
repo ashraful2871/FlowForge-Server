@@ -1,6 +1,6 @@
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { getCookie, newAgent } from "../../../tests/helpers/agent";
+import { getCookie, newAgent, TEST_ORIGIN } from "../../../tests/helpers/agent";
 import { resetDb } from "../../../tests/helpers/db";
 import {
   signUp,
@@ -313,5 +313,42 @@ describe("logout, logout-all, GET /me", () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.memberships)).toBe(true);
     expect(res.body.user.passwordHash).toBeUndefined();
+  });
+});
+
+describe("origin check", () => {
+  it("rejects a POST without an Origin header", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email: "a@test.dev", password: "whatever-123" });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("CSRF_REJECTED");
+  });
+
+  it("rejects a POST from another site", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/login")
+      .set("Origin", "https://evil.example")
+      .send({ email: "a@test.dev", password: "whatever-123" });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("lets an allowed origin through", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/login")
+      .set("Origin", TEST_ORIGIN)
+      .send({});
+
+    // origin পার হয়ে validation পর্যন্ত পৌঁছেছে, তাই 422
+    expect(res.status).toBe(422);
+  });
+
+  it("does not check GET requests", async () => {
+    const res = await request(app).get("/api/v1/me");
+
+    // 403 নয়, 401: origin check ছেড়ে দিয়েছে, requireSession আটকেছে
+    expect(res.status).toBe(401);
   });
 });

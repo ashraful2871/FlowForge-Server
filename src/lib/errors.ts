@@ -23,3 +23,7 @@ export function conflictError(code: string, message: string): AppError {
 export function unauthenticatedError(message = "Not Logged In"): AppError {
   return new AppError(401, "UNAUTHENTICATED", message);
 }
+
+export const csrfRejectedError = (): AppError => {
+  return new AppError(403, "CSRF_REJECTED", "Request origin is not allowed");
+};

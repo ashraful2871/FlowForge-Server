@@ -8,6 +8,7 @@ import helmet from "helmet";
 import { config } from "./config";
 import { createApiRouter } from "./routes";
 import cookieParser from "cookie-parser";
+import { originCheck } from "./middleware/originCheck";
 
 export const createApp = (): Express => {
   const app = express();
@@ -17,6 +18,7 @@ export const createApp = (): Express => {
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
   app.use(healthRoute);
+  app.use(originCheck);
   app.use("/api/v1", createApiRouter());
   app.use(notFound);
   app.use(errorHandler);

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { newAgent } from "./agent";
 
 export const TEST_PASSWORD = "correct-horse-battery";
+export type TestOrg = { id: string; name: string; slug: string };
 
 type Agent = ReturnType<typeof newAgent>;
 export type TestUser = { id: string; name: string; email: string };
@@ -24,3 +25,16 @@ export async function signUp(
   }
   return { agent, user: res.body.user as TestUser };
 }
+
+// API দিয়ে org বানায়; slug প্রতিবার আলাদা, তাই test-গুলো একে অন্যের সাথে ধাক্কা খায় না
+export const createOrg = async (agent: Agent): Promise<TestOrg> => {
+  const slug = `org-${randomUUID().slice(0, 8)}`;
+  const res = await agent.post("/api/v1/orgs").send({ name: "Test Org", slug });
+
+  if (res.status !== 201) {
+    throw new Error(
+      `createOrg failed: ${res.status} ${JSON.stringify(res.body)}`,
+    );
+  }
+  return res.body as TestOrg;
+};

@@ -1,13 +1,21 @@
 import { Router } from "express";
 import { requireSession } from "../../middleware/requireSession";
-import { orgController } from "./orgs.controller";
+import { OrgController } from "./orgs.controller";
+import { requireMembership } from "../../middleware/requireMembership";
 
 export const createOrgRouter = (): Router => {
   const router = Router();
 
   router.use(requireSession);
 
-  router.post("/", orgController.createOrgHandler);
-  router.get("/", orgController.listOrgsHandler);
+  router.post("/", OrgController.createOrgHandler);
+  router.get("/", OrgController.listOrgsHandler);
+
+  const orgRoute = Router({ mergeParams: true });
+  orgRoute.use(requireMembership);
+
+  orgRoute.get("/", OrgController.getOrgController);
+  router.use("/:orgId", orgRoute);
+
   return router;
 };

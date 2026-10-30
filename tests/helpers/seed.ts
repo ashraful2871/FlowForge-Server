@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { newAgent } from "./agent";
+import { prisma } from "../../src/lib/db";
+import type { OrgRole } from "../../src/generated/prisma/enums";
 
 export const TEST_PASSWORD = "correct-horse-battery";
 export type TestOrg = { id: string; name: string; slug: string };
@@ -37,4 +39,16 @@ export const createOrg = async (agent: Agent): Promise<TestOrg> => {
     );
   }
   return res.body as TestOrg;
+};
+
+// নতুন user বানিয়ে সরাসরি DB-তে membership বসায় (invite ছাড়া)
+export const addMember = async (
+  orgId: string,
+  role: OrgRole,
+): Promise<{ agent: Agent; user: TestUser }> => {
+  const member = await signUp("Member");
+  await prisma.membership.create({
+    data: { organizationId: orgId, userId: member.user.id, role },
+  });
+  return member;
 };

@@ -1,3 +1,4 @@
+import type { Membership } from "../../generated/prisma/client";
 import { OrgRole } from "../../generated/prisma/enums";
 import { prisma } from "../../lib/db";
 import { conflictError } from "../../lib/errors";
@@ -62,7 +63,18 @@ const listMyOrg = async (userid: string): Promise<OrgSummary[]> => {
   }));
 };
 
+const getOrg = async (actor: Membership): Promise<OrgSummary> => {
+  const org = await prisma.organization.findUniqueOrThrow({
+    where: {
+      id: actor.organizationId,
+    },
+  });
+
+  return { id: org.id, name: org.name, slug: org.slug, role: actor.role };
+};
+
 export const OrgServices = {
   createOrg,
   listMyOrg,
+  getOrg,
 };

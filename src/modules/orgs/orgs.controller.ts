@@ -2,11 +2,9 @@ import type { Request, Response } from "express";
 import { getAuth } from "../../middleware/requireSession";
 import { CreateOrgBody } from "./orgs.schema";
 import { OrgServices } from "./orgs.service";
+import { getMembership } from "../../middleware/requireMembership";
 
-export const createOrgHandler = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+const createOrgHandler = async (req: Request, res: Response): Promise<void> => {
   const { user } = getAuth(req);
   const input = CreateOrgBody.parse(req.body);
   const org = await OrgServices.createOrg(user.id, input);
@@ -19,7 +17,13 @@ const listOrgsHandler = async (req: Request, res: Response): Promise<void> => {
   res.json({ data });
 };
 
-export const orgController = {
+const getOrgController = async (req: Request, res: Response): Promise<void> => {
+  const org = await OrgServices.getOrg(getMembership(req));
+  res.json(org);
+};
+
+export const OrgController = {
   createOrgHandler,
   listOrgsHandler,
+  getOrgController,
 };

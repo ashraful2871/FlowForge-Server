@@ -1,8 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { newAgent } from "../../../tests/helpers/agent";
 import { resetDb } from "../../../tests/helpers/db";
-import { createOrg, signUp } from "../../../tests/helpers/seed";
+import { addMember, createOrg, signUp } from "../../../tests/helpers/seed";
 import { prisma } from "../../lib/db";
+import { randomUUID } from "node:crypto";
 
 beforeEach(async () => {
   await resetDb();
@@ -75,5 +76,59 @@ describe("POST /orgs and GET /orgs", () => {
 
     const res = await agent.get("/api/v1/me");
     expect(res.body.memberships[0].organizationId).toBe(org.id);
+  });
+});
+
+describe("requireMembership (via GET /orgs/:orgId)", () => {
+  it("returns the org and my role to a member", async () => {
+    const { agent } = await signUp();
+    const org = await createOrg(agent);
+
+    const res = await agent.get(`/api/v1/orgs/${org.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.role).toBe("OWNER");
+  });
+
+  it("returns 404 for someone else's org", async () => {
+    const owner = await signUp();
+    const stranger = await signUp();
+    const org = await createOrg(owner.agent);
+
+    const res = await stranger.agent.get(`/api/v1/orgs/${org.id}`);
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("returns 404 for an id that is not a UUID", async () => {
+    const { agent } = await signUp();
+    const res = await agent.get("/api/v1/orgs/abc");
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 for a UUID that does not exist", async () => {
+    const { agent } = await signUp();
+    const res = await agent.get(`/api/v1/orgs/${randomUUID()}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 for a removed member", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+    const member = await addMember(org.id, "MEMBER");
+    await prisma.membership.updateMany({
+      where: { userId: member.user.id },
+      data: { status: "REMOVED" },
+    });
+
+    const res = await member.agent.get(`/api/v1/orgs/${org.id}`);
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 401 when logged out", async () => {
+    const res = await newAgent().get(`/api/v1/orgs/${randomUUID()}`);
+
+    expect(res.status).toBe(401);
   });
 });

@@ -132,3 +132,172 @@ describe("requireMembership (via GET /orgs/:orgId)", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("org update, delete and members", () => {
+  it("ADMIN can rename the org", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+    const admin = await addMember(org.id, "ADMIN");
+
+    const res = await admin.agent
+      .patch(`/api/v1/orgs/${org.id}`)
+      .send({ name: "Renamed" });
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe("Renamed");
+  });
+
+  it("MEMBER cannot rename the org", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+    const member = await addMember(org.id, "MEMBER");
+
+    const res = await member.agent
+      .patch(`/api/v1/orgs/${org.id}`)
+      .send({ name: "Renamed" });
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("FORBIDDEN");
+  });
+
+  it("ADMIN cannot delete the org", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+    const admin = await addMember(org.id, "ADMIN");
+
+    const res = await admin.agent.delete(`/api/v1/orgs/${org.id}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("OWNER deletes the org and everything in it", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+
+    const res = await owner.agent.delete(`/api/v1/orgs/${org.id}`);
+    expect(res.status).toBe(204);
+
+    const after = await owner.agent.get(`/api/v1/orgs/${org.id}`);
+    expect(after.status).toBe(404);
+    expect(
+      await prisma.membership.count({ where: { organizationId: org.id } }),
+    ).toBe(0);
+  });
+
+  it("lists members without password hashes", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+    await addMember(org.id, "MEMBER");
+
+    const res = await owner.agent.get(`/api/v1/orgs/${org.id}/members`);
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.data[0].passwordHash).toBeUndefined();
+  });
+
+  it("ADMIN changes a MEMBER to VIEWER and it is audited", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+    const admin = await addMember(org.id, "ADMIN");
+    const member = await addMember(org.id, "MEMBER");
+
+    const res = await admin.agent
+      .patch(`/api/v1/orgs/${org.id}/members/${member.user.id}`)
+      .send({ role: "VIEWER" });
+    expect(res.status).toBe(200);
+    expect(res.body.role).toBe("VIEWER");
+
+    const audit = await prisma.auditLog.findFirstOrThrow({
+      where: { action: "ROLE_CHANGE" },
+    });
+    expect(audit.metaData).toEqual({ from: "MEMBER", to: "VIEWER" });
+  });
+
+  it("ADMIN cannot change the OWNER's role", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+    const admin = await addMember(org.id, "ADMIN");
+
+    const res = await admin.agent
+      .patch(`/api/v1/orgs/${org.id}/members/${owner.user.id}`)
+      .send({ role: "VIEWER" });
+    expect(res.status).toBe(403);
+  });
+
+  it("the only OWNER cannot change their own role", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+
+    const res = await owner.agent
+      .patch(`/api/v1/orgs/${org.id}/members/${owner.user.id}`)
+      .send({ role: "ADMIN" });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("LAST_OWNER");
+  });
+
+  it("returns 422 for role OWNER in the body", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+    const member = await addMember(org.id, "MEMBER");
+
+    const res = await owner.agent
+      .patch(`/api/v1/orgs/${org.id}/members/${member.user.id}`)
+      .send({ role: "OWNER" });
+    expect(res.status).toBe(422);
+  });
+
+  it("a MEMBER can leave", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+    const member = await addMember(org.id, "MEMBER");
+
+    const res = await member.agent.delete(
+      `/api/v1/orgs/${org.id}/members/${member.user.id}`,
+    );
+    expect(res.status).toBe(204);
+
+    const after = await member.agent.get(`/api/v1/orgs/${org.id}`);
+    expect(after.status).toBe(404);
+  });
+
+  it("the only OWNER cannot leave", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+
+    const res = await owner.agent.delete(
+      `/api/v1/orgs/${org.id}/members/${owner.user.id}`,
+    );
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("LAST_OWNER");
+  });
+
+  it("OWNER transfers ownership and becomes ADMIN", async () => {
+    const owner = await signUp();
+    const org = await createOrg(owner.agent);
+    const member = await addMember(org.id, "MEMBER");
+
+    const res = await owner.agent
+      .post(`/api/v1/orgs/${org.id}/transfer-ownership`)
+      .send({ userId: member.user.id });
+    expect(res.status).toBe(200);
+
+    const roles = await prisma.membership.findMany({
+      where: { organizationId: org.id },
+      select: { userId: true, role: true },
+    });
+    expect(roles).toContainEqual({ userId: member.user.id, role: "OWNER" });
+    expect(roles).toContainEqual({ userId: owner.user.id, role: "ADMIN" });
+    expect(
+      await prisma.auditLog.count({
+        where: { action: "OWNERSHIP_TRANSFERRED" },
+      }),
+    ).toBe(1);
+  });
+
+  it("returns 404 when transferring to a non-member", async () => {
+    const owner = await signUp();
+    const stranger = await signUp();
+    const org = await createOrg(owner.agent);
+
+    const res = await owner.agent
+      .post(`/api/v1/orgs/${org.id}/transfer-ownership`)
+      .send({ userId: stranger.user.id });
+    expect(res.status).toBe(404);
+  });
+});

@@ -15,6 +15,12 @@ export const createOrgRouter = (): Router => {
   orgRoute.use(requireMembership);
 
   orgRoute.get("/", OrgController.getOrgController);
+  orgRoute.patch("/", OrgController.updateOrgHandler);
+  orgRoute.delete("/", OrgController.deleteOrgHandler);
+  orgRoute.get("/members", OrgController.listMembersHandler);
+  orgRoute.patch("/members/:userId", OrgController.changeRoleHandler);
+  orgRoute.delete("/members/:userId", OrgController.removeMemberHandler);
+  orgRoute.post("/transfer-ownership", OrgController.transferOwnershipHandler);
   router.use("/:orgId", orgRoute);
 
   return router;

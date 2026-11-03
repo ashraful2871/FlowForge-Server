@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireSession } from "../../middleware/requireSession";
 import { OrgController } from "./orgs.controller";
 import { requireMembership } from "../../middleware/requireMembership";
+import { createOrgInvitationsRouter } from "../invitations/invitations.routes";
 
 export const createOrgRouter = (): Router => {
   const router = Router();
@@ -21,6 +22,7 @@ export const createOrgRouter = (): Router => {
   orgRoute.patch("/members/:userId", OrgController.changeRoleHandler);
   orgRoute.delete("/members/:userId", OrgController.removeMemberHandler);
   orgRoute.post("/transfer-ownership", OrgController.transferOwnershipHandler);
+  orgRoute.use("/invitations", createOrgInvitationsRouter());
   router.use("/:orgId", orgRoute);
 
   return router;

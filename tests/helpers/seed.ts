@@ -73,3 +73,14 @@ export const createInvite = async (input: {
   });
   return { id: invitation.id, token };
 };
+
+export const createResetToken = async (
+  userId: string,
+  expiresAt = new Date(Date.now() + 30 * 60 * 1000),
+): Promise<string> => {
+  const token = generateToken();
+  await prisma.passwordResetToken.create({
+    data: { userId, tokenHash: hashToken(token), expiresAt },
+  });
+  return token;
+};

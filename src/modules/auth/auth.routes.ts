@@ -28,6 +28,18 @@ export const createAuthRouter = (): Router => {
 
   router.post("/logout", requireSession, AuthController.logoutHandler);
   router.post("/logout-all", requireSession, AuthController.logoutAllHandler);
+  router.post(
+    "/password-reset/request",
+    perIp,
+    emailLimiter("reset", HOUR, 3),
+    AuthController.passwordResetRequestHandler,
+  );
+
+  router.post(
+    "/password-reset/confirm",
+    perIp,
+    AuthController.passwordResetConfirmHandler,
+  );
 
   return router;
 };

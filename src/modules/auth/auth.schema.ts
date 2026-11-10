@@ -13,5 +13,14 @@ export const LoginBody = z.object({
   password: z.string().min(1).max(128),
 });
 
+export const PasswordRequestBody = z.object({
+  email: emailSchema,
+});
+
+export const passwordResetConfirmBody = z.object({
+  token: z.string().min(1).max(200),
+  newPassword: passwordSchema,
+});
+
 export type RegisterInput = z.infer<typeof RegisterBody>;
 export type LoginInput = z.infer<typeof LoginBody>;

@@ -9,6 +9,7 @@ import { generateToken, hashToken } from "../../lib/token";
 import type { LoginInput, RegisterInput } from "./auth.schema";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
 
 export type PublicUser = {
   id: string;
@@ -163,10 +164,88 @@ export const isMyMembership = async (
   }));
 };
 
+const requestPasswordReset = async (email: string): Promise<string | null> => {
+  const user = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+  if (!user) {
+    return null;
+  }
+
+  const token = generateToken();
+
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      tokenHash: hashToken(token),
+      expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+    },
+  });
+  return token;
+};
+
+const invalidTokenError = (): AppError =>
+  new AppError(
+    400,
+    "INVALID_TOKEN",
+    "This reset link is invalid or has expired",
+  );
+
+const confirmPasswordReset = async (
+  token: string,
+  newPassword: string,
+): Promise<void> => {
+  const record = await prisma.passwordResetToken.findUnique({
+    where: { tokenHash: hashToken(token) },
+  });
+
+  if (!record || record.usedAt !== null || record.expiresAt <= new Date()) {
+    throw invalidTokenError();
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+
+  await prisma.$transaction(async (tx) => {
+    const claimed = await tx.passwordResetToken.updateMany({
+      where: {
+        id: record.id,
+        usedAt: null,
+      },
+      data: {
+        usedAt: new Date(),
+      },
+    });
+    if (claimed.count === 0) {
+      throw invalidTokenError();
+    }
+    await tx.user.update({
+      where: {
+        id: record.userId,
+      },
+      data: {
+        passwordHash,
+      },
+    });
+    await tx.session.updateMany({
+      where: {
+        userId: record.userId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+  });
+};
+
 export const AuthServices = {
   register,
   login,
   logout,
   logoutAll,
   isMyMembership,
+  requestPasswordReset,
+  confirmPasswordReset,
 };

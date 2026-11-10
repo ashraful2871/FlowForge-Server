@@ -3,6 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getCookie, newAgent, TEST_ORIGIN } from "../../../tests/helpers/agent";
 import { resetDb } from "../../../tests/helpers/db";
 import {
+  createResetToken,
   signUp,
   TEST_PASSWORD,
   uniqueEmail,
@@ -350,5 +351,94 @@ describe("origin check", () => {
 
     // 403 নয়, 401: origin check ছেড়ে দিয়েছে, requireSession আটকেছে
     expect(res.status).toBe(401);
+  });
+});
+
+describe("password reset", () => {
+  it("returns 202 for an unknown email and stores nothing", async () => {
+    const res = await newAgent()
+      .post("/api/v1/auth/password-reset/request")
+      .send({ email: "nobody@test.dev" });
+
+    expect(res.status).toBe(202);
+    expect(await prisma.passwordResetToken.count()).toBe(0);
+  });
+
+  it("returns 202 for a known email and stores one token", async () => {
+    const { user } = await signUp();
+    const res = await newAgent()
+      .post("/api/v1/auth/password-reset/request")
+      .send({ email: user.email });
+
+    expect(res.status).toBe(202);
+    expect(await prisma.passwordResetToken.count()).toBe(1);
+  });
+
+  it("changes the password", async () => {
+    const { user } = await signUp();
+    const token = await createResetToken(user.id);
+
+    const res = await newAgent()
+      .post("/api/v1/auth/password-reset/confirm")
+      .send({ token, newPassword: "brand-new-secret-42" });
+    expect(res.status).toBe(204);
+
+    const oldLogin = await newAgent()
+      .post("/api/v1/auth/login")
+      .send({ email: user.email, password: TEST_PASSWORD });
+    const newLogin = await newAgent()
+      .post("/api/v1/auth/login")
+      .send({ email: user.email, password: "brand-new-secret-42" });
+    expect(oldLogin.status).toBe(401);
+    expect(newLogin.status).toBe(200);
+  });
+
+  it("logs out every existing session", async () => {
+    const { agent, user } = await signUp();
+    const token = await createResetToken(user.id);
+
+    await newAgent()
+      .post("/api/v1/auth/password-reset/confirm")
+      .send({ token, newPassword: "brand-new-secret-42" });
+
+    const me = await agent.get("/api/v1/me");
+    expect(me.status).toBe(401);
+  });
+
+  it("rejects a token used twice", async () => {
+    const { user } = await signUp();
+    const token = await createResetToken(user.id);
+    const body = { token, newPassword: "brand-new-secret-42" };
+
+    await newAgent().post("/api/v1/auth/password-reset/confirm").send(body);
+    const res = await newAgent()
+      .post("/api/v1/auth/password-reset/confirm")
+      .send(body);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("INVALID_TOKEN");
+  });
+
+  it("rejects an expired token", async () => {
+    const { user } = await signUp();
+    const token = await createResetToken(
+      user.id,
+      new Date(Date.now() - 60 * 1000),
+    );
+
+    const res = await newAgent()
+      .post("/api/v1/auth/password-reset/confirm")
+      .send({ token, newPassword: "brand-new-secret-42" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 422 for a weak new password", async () => {
+    const { user } = await signUp();
+    const token = await createResetToken(user.id);
+
+    const res = await newAgent()
+      .post("/api/v1/auth/password-reset/confirm")
+      .send({ token, newPassword: "short" });
+    expect(res.status).toBe(422);
   });
 });

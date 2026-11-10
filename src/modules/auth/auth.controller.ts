@@ -1,9 +1,15 @@
 import type { Request, Response } from "express";
-import { LoginBody, RegisterBody } from "./auth.schema";
+import {
+  LoginBody,
+  PasswordRequestBody,
+  passwordResetConfirmBody,
+  RegisterBody,
+} from "./auth.schema";
 
 import { clearSessionCookie, setSessionCookie } from "../../lib/sessionCookie";
 import { getAuth } from "../../middleware/requireSession";
 import { AuthServices } from "./auth.service";
+import { config } from "../../config";
 
 export const registerHandler = async (
   req: Request,
@@ -57,10 +63,36 @@ export const meHandler = async (req: Request, res: Response): Promise<void> => {
 
   res.json({ user, memberships });
 };
+
+const passwordResetRequestHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { email } = PasswordRequestBody.parse(req.body);
+  const token = await AuthServices.requestPasswordReset(email);
+  if (token && config.NODE_ENV === "development") {
+    const resetUrl = `${config.APP_URL}/reset-password?token=${token}`;
+    req.log.info({ resetUrl }, "Password reset link (Development Only)");
+  }
+
+  res.status(202).end();
+};
+
+const passwordResetConfirmHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { token, newPassword } = passwordResetConfirmBody.parse(req.body);
+  await AuthServices.confirmPasswordReset(token, newPassword);
+  res.status(204).end();
+};
+
 export const AuthController = {
   registerHandler,
   loginHandler,
   meHandler,
   logoutHandler,
   logoutAllHandler,
+  passwordResetRequestHandler,
+  passwordResetConfirmHandler,
 };

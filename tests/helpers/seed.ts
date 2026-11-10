@@ -84,3 +84,27 @@ export const createResetToken = async (
   });
   return token;
 };
+
+// দুটো আলাদা org: A-র মালিক দিয়ে B-র সব জিনিসে হাত দেওয়ার চেষ্টা হবে
+export const seedTwoOrgs = async () => {
+  const a = await signUp("Owner A");
+  const b = await signUp("Owner B");
+  const orgA = await createOrg(a.agent);
+  const orgB = await createOrg(b.agent);
+  const bMember = await addMember(orgB.id, "MEMBER");
+  const bInvite = await createInvite({
+    orgId: orgB.id,
+    email: uniqueEmail(),
+    role: "MEMBER",
+    invitedById: b.user.id,
+  });
+
+  return {
+    agentA: a.agent,
+    orgA,
+    orgB,
+    ownerBId: b.user.id,
+    bMemberId: bMember.user.id,
+    bInviteId: bInvite.id,
+  };
+};

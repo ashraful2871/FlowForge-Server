@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { newAgent } from "./agent";
 import { prisma } from "../../src/lib/db";
 import type { OrgRole } from "../../src/generated/prisma/enums";
+import { generateToken, hashToken } from "../../src/lib/token";
 
 export const TEST_PASSWORD = "correct-horse-battery";
 export type TestOrg = { id: string; name: string; slug: string };
@@ -41,7 +42,6 @@ export const createOrg = async (agent: Agent): Promise<TestOrg> => {
   return res.body as TestOrg;
 };
 
-// নতুন user বানিয়ে সরাসরি DB-তে membership বসায় (invite ছাড়া)
 export const addMember = async (
   orgId: string,
   role: OrgRole,
@@ -51,4 +51,25 @@ export const addMember = async (
     data: { organizationId: orgId, userId: member.user.id, role },
   });
   return member;
+};
+// API token ফেরত দেয় না, তাই test নিজে token বানিয়ে hash-টা DB-তে রাখে
+export const createInvite = async (input: {
+  orgId: string;
+  email: string;
+  role: OrgRole;
+  invitedById: string;
+  expiresAt?: Date;
+}): Promise<{ id: string; token: string }> => {
+  const token = generateToken();
+  const invitation = await prisma.invitation.create({
+    data: {
+      organizationId: input.orgId,
+      email: input.email,
+      role: input.role,
+      invitedById: input.invitedById,
+      tokenHash: hashToken(token),
+      expiresAt: input.expiresAt ?? new Date(Date.now() + 60 * 60 * 1000),
+    },
+  });
+  return { id: invitation.id, token };
 };

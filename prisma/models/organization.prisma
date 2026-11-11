@@ -7,6 +7,9 @@ model Organization {
   memberships Membership[]
   invitations Invitation[]
   auditLogs   AuditLog[]
+  projects    Project[]
+  tasks       Task[]
+  comments    Comment[]
 }
 
 model Membership {

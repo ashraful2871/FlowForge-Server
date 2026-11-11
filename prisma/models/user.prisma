@@ -12,4 +12,8 @@ model User {
   memberships         Membership[]
   invitationsSent     Invitation[]
   auditLogs           AuditLog[]
+  projectsCreated     Project[]            @relation("ProjectCreatedBy")
+  tasksAssigned       Task[]               @relation("TaskAssignee")
+  tasksReported       Task[]               @relation("TaskReporter")
+  comments            Comment[]
 }

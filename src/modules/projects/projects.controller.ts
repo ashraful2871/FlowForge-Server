@@ -26,7 +26,7 @@ const listProjectHandler = async (
 ): Promise<void> => {
   const { status } = ListProjectQuery.parse(req.query);
   const data = await ProjectServices.listProjects(getMembership(req), status);
-  res.json(data);
+  res.json({ data });
 };
 
 const getProjectHandler = async (
@@ -55,9 +55,46 @@ const updateProjectHandler = async (
   res.json(project);
 };
 
+const archivedProjectHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const project = await ProjectServices.setArchived(
+    getMembership(req),
+    req.params.projectId,
+    true,
+  );
+  res.json(project);
+};
+
+const unArchivedProjectHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const project = await ProjectServices.setArchived(
+    getMembership(req),
+    req.params.projectId,
+    false,
+  );
+
+  res.json(project);
+};
+
+const deleteProjectHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  await ProjectServices.deleteProject(getMembership(req), req.params.projectId);
+
+  res.status(204).end();
+};
+
 export const ProjectController = {
   createProjectHandler,
   listProjectHandler,
   getProjectHandler,
   updateProjectHandler,
+  archivedProjectHandler,
+  unArchivedProjectHandler,
+  deleteProjectHandler,
 };

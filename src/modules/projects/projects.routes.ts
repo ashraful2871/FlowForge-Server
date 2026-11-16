@@ -8,5 +8,13 @@ export const createProjectRouter = (): Router => {
   router.get("/", ProjectController.listProjectHandler);
   router.get("/:projectId", ProjectController.getProjectHandler);
   router.patch("/:projectId", ProjectController.updateProjectHandler);
+  router.post("/:projectId/archive", ProjectController.archivedProjectHandler);
+  router.post(
+    "/:projectId/unarchive",
+    ProjectController.unArchivedProjectHandler,
+  );
+
+  router.delete("/:projectId", ProjectController.deleteProjectHandler);
+
   return router;
 };

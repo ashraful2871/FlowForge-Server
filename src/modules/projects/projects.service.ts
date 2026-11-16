@@ -3,6 +3,7 @@ import type {
   Project,
   ProjectStatus,
 } from "../../generated/prisma/client";
+import { writeAudit } from "../../lib/audit";
 import { prisma } from "../../lib/db";
 import { conflictError, notFoundError } from "../../lib/errors";
 import { assertCan } from "../../lib/policy";
@@ -123,9 +124,67 @@ const updateProject = async (
   return toProjectSummary(updated);
 };
 
+const setArchived = async (
+  actor: Membership,
+  rawId: unknown,
+  archived: boolean,
+): Promise<ProjectSummary> => {
+  assertCan(actor.role, "project:manage");
+
+  const project = await findProject(actor.organizationId, rawId);
+  const target: ProjectStatus = archived ? "ARCHIVED" : "ACTIVE";
+
+  if (project.status === target) {
+    return toProjectSummary(project);
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const update = await prisma.project.update({
+      where: {
+        id: project.id,
+      },
+      data: {
+        status: target,
+      },
+    });
+    await writeAudit(tx, {
+      organizationId: actor.organizationId,
+      actorId: actor.userId,
+      action: "PROJECT_ARCHIVE",
+      targetedType: "Project",
+      targetedId: project.id,
+      metaData: { archived },
+    });
+    return toProjectSummary(update);
+  });
+};
+
+const deleteProject = async (
+  actor: Membership,
+  rawId: unknown,
+): Promise<void> => {
+  assertCan(actor.role, "project:manage");
+
+  const project = await findProject(actor.organizationId, rawId);
+
+  if (project.status !== "ARCHIVED") {
+    throw conflictError(
+      "PROJECT_NOT_ARCHIVED",
+      "Archived the project before delete it",
+    );
+  }
+  await prisma.project.delete({
+    where: {
+      id: project.id,
+    },
+  });
+};
+
 export const ProjectServices = {
   CreateProject,
   listProjects,
   getProject,
   updateProject,
+  setArchived,
+  deleteProject,
 };

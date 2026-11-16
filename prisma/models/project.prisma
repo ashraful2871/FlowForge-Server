@@ -5,7 +5,7 @@ model Project {
   key            String
   description    String?
   status         ProjectStatus @default(ACTIVE)
-  taskCount      Int           @default(0)
+  taskCounter    Int           @default(0)
   createdById    String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -43,8 +43,8 @@ model Task {
 
   @@unique([projectId, number])
   @@unique([id, organizationId])
-  @@unique([organizationId, projectId, status])
-  @@unique([organizationId, assigneeId])
+  @@index([organizationId, projectId, status])
+  @@index([organizationId, assigneeId])
 }
 
 model Comment {
@@ -55,7 +55,7 @@ model Comment {
   body           String
   editAt         DateTime?
   deleteAt       DateTime?
-  createdAt      DateTime  @default(now())
+  createdAt      DateTime
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   task         Task         @relation(fields: [taskId, organizationId], references: [id, organizationId], onDelete: Cascade)

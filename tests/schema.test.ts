@@ -60,4 +60,24 @@ describe("database guarantees", () => {
       }),
     ).rejects.toThrow();
   });
+  it("allows many tasks with the same status and assignee", async () => {
+    const { agent, user } = await signUp("Owner");
+    const org = await createOrg(agent);
+    const project = await prisma.project.create({
+      data: { organizationId: org.id, name: "Website", key: "WEB" },
+    });
+
+    // status আর assignee-তে index আছে, unique নয়: একই মানের অনেক task থাকতে পারে
+    await prisma.task.createMany({
+      data: [1, 2, 3].map((number) => ({
+        organizationId: org.id,
+        projectId: project.id,
+        number,
+        title: `Task ${number}`,
+        assigneeId: user.id,
+      })),
+    });
+
+    expect(await prisma.task.count()).toBe(3);
+  });
 });

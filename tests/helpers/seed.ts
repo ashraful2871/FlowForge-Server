@@ -108,3 +108,23 @@ export const seedTwoOrgs = async () => {
     bInviteId: bInvite.id,
   };
 };
+
+export type TestProject = { id: string; name: string; key: string };
+
+// API দিয়ে project বানায়; key প্রতিবার আলাদা, তাই একই org-এ একাধিক বানানো যায়
+export const createProject = async (
+  agent: Agent,
+  orgId: string,
+): Promise<TestProject> => {
+  const key = `P${randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()}`;
+  const res = await agent
+    .post(`/api/v1/orgs/${orgId}/projects`)
+    .send({ name: "Test Project", key });
+
+  if (res.status !== 201) {
+    throw new Error(
+      `createProject failed: ${res.status} ${JSON.stringify(res.body)}`,
+    );
+  }
+  return res.body as TestProject;
+};

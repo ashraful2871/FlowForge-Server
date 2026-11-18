@@ -95,6 +95,33 @@ const CASES: Case[] = [
     path: (s) => `/api/v1/orgs/${s.orgA.id}/transfer-ownership`,
     body: (s) => ({ userId: s.bMemberId }),
   },
+  {
+    name: "list org B projects",
+    method: "get",
+    path: (s) => `/api/v1/orgs/${s.orgB.id}/projects`,
+  },
+  {
+    name: "create a project in org B",
+    method: "post",
+    path: (s) => `/api/v1/orgs/${s.orgB.id}/projects`,
+    body: () => ({ name: "Hacked", key: "HACK" }),
+  },
+  {
+    name: "read org B project through org A's path",
+    method: "get",
+    path: (s) => `/api/v1/orgs/${s.orgA.id}/projects/${s.bProjectId}`,
+  },
+  {
+    name: "rename org B project through org A's path",
+    method: "patch",
+    path: (s) => `/api/v1/orgs/${s.orgA.id}/projects/${s.bProjectId}`,
+    body: () => ({ name: "hacked" }),
+  },
+  {
+    name: "archive org B project through org A's path",
+    method: "post",
+    path: (s) => `/api/v1/orgs/${s.orgA.id}/projects/${s.bProjectId}/archive`,
+  },
 ];
 
 let seed: Seed;
@@ -138,6 +165,11 @@ describe("an Org A owner gets 404 for everything in Org B", () => {
     expect(member).toMatchObject({ role: "MEMBER", status: "ACTIVE" });
     expect(owner.role).toBe("OWNER");
     expect(invite.revokedAt).toBeNull();
+    const project = await prisma.project.findUniqueOrThrow({
+      where: { id: seed.bProjectId },
+    });
+    expect(project).toMatchObject({ name: "Test Project", status: "ACTIVE" });
+    expect(await prisma.project.count({ where: { name: "Hacked" } })).toBe(0);
   });
 
   it("does not show Org B in A's lists", async () => {

@@ -98,6 +98,7 @@ export const seedTwoOrgs = async () => {
     role: "MEMBER",
     invitedById: b.user.id,
   });
+  const bProject = await createProject(b.agent, orgB.id);
 
   return {
     agentA: a.agent,
@@ -106,6 +107,7 @@ export const seedTwoOrgs = async () => {
     ownerBId: b.user.id,
     bMemberId: bMember.user.id,
     bInviteId: bInvite.id,
+    bProjectId: bProject.id,
   };
 };
 
